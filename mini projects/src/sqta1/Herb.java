@@ -7,6 +7,7 @@ import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import javax.swing.ImageIcon;
@@ -27,14 +28,11 @@ public class Herb {
 	private JTextField textFieldGinseng;
 	private JTextField textFieldTurmeric;
 
-	/**
-	 * Launch the application.
-	 */
-	public void herbBook() {
+	public static void herbBook(int id, JFrame f) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					Herb window = new Herb();
+					Herb window = new Herb(id, f);
 					window.frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -43,17 +41,11 @@ public class Herb {
 		});
 	}
 
-	/**
-	 * Create the application.
-	 */
-	public Herb() {
-		initialize();
+	public Herb(int id, JFrame f) {
+		initialize(id, f);
 	}
 
-	/**
-	 * Initialize the contents of the frame.
-	 */
-	private void initialize() {
+	private void initialize(int id, JFrame f) {
 		frame = new JFrame();
 		frame.setTitle("Herbs");
 		frame.getContentPane().setForeground(SystemColor.desktop);
@@ -70,13 +62,12 @@ public class Herb {
 		lblNewLabel.setBounds(229, 10, 141, 27);
 		frame.getContentPane().add(lblNewLabel);
 		
-		JButton btnNewButton = new JButton("Logout");
+		JButton btnNewButton = new JButton("Back");
 		btnNewButton.setFont(new Font("Tahoma", Font.PLAIN, 12));
 		btnNewButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				frame.dispose();
-				LogIn obj = new LogIn();
-				obj.initialize();
+				f.setVisible(true);
 			}
 		});
 		btnNewButton.setBounds(10, 14, 97, 28);
@@ -92,16 +83,18 @@ public class Herb {
 		JButton btnNewButton_1 = new JButton("Cart");
 		btnNewButton_1.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				String op = "Products        Count       Total";
+				String op = "Products    |    Count    |    Total";
+				op+="\n-------------------------------------------";
 				if(basilCNT>0)
-					op+="\nbasil                    "+basilCNT+"              "+basilCNT*100;
+					op+="\nBasil           |         "+basilCNT+"        |      "+basilCNT*100;
 				if(mintCNT>0)
-					op+="\nMint                     "+mintCNT+"              "+mintCNT*80;
+					op+="\nMint            |         "+mintCNT+"        |      "+mintCNT*80;
 				if(ginsengCNT>0)
-					op+="\nginseng              "+ginsengCNT+"              "+ginsengCNT*800;
+					op+="\nGinseng     |         "+ginsengCNT+"        |      "+ginsengCNT*800;
 				if(turmericCNT>0)
-					op+="\nturmeric              "+turmericCNT+"              "+turmericCNT*320;
+					op+="\nTurmeric    |         "+turmericCNT+"        |      "+turmericCNT*320;
 				int TotalPrice = basilCNT*100+mintCNT*80+ginsengCNT*800+turmericCNT*320;
+				op+="\n-------------------------------------------";
 				op+="\nTotal Price                         "+TotalPrice;
 				JOptionPane.showMessageDialog(frame,op);
 			}
@@ -120,6 +113,10 @@ public class Herb {
 		buttonBasilPlus.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				basilCNT++;
+				if(basilCNT > 20) {
+					basilCNT = 20;
+					JOptionPane.showMessageDialog(null, "You can't buy more than 20!");
+				}
 				textFieldBasil.setText(Integer.toString(basilCNT));
 			}
 		});
@@ -152,6 +149,10 @@ public class Herb {
 		buttonMintPlus.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				mintCNT++;
+				if(mintCNT > 20) {
+					mintCNT = 20;
+					JOptionPane.showMessageDialog(null, "You can't buy more than 20!");
+				}
 				textFieldMint.setText(Integer.toString(mintCNT));
 			}
 		});
@@ -204,6 +205,10 @@ public class Herb {
 		buttonGinsengPlus.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				ginsengCNT++;
+				if(ginsengCNT > 20) {
+					ginsengCNT = 20;
+					JOptionPane.showMessageDialog(null, "You can't buy more than 20!");
+				}
 				textFieldGinseng.setText(Integer.toString(ginsengCNT));
 			}
 		});
@@ -254,6 +259,10 @@ public class Herb {
 		buttonTurmericPlus.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				turmericCNT++;
+				if(turmericCNT > 20) {
+					turmericCNT = 20;
+					JOptionPane.showMessageDialog(null, "You can't buy more than 20!");
+				}
 				textFieldTurmeric.setText(Integer.toString(turmericCNT));
 			}
 		});
@@ -284,38 +293,77 @@ public class Herb {
 		
 		JButton btnNewButton_2 = new JButton("Place Order");
 		btnNewButton_2.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				/*Connection conn =null;
+			public void actionPerformed(ActionEvent e) 
+			{
+				int x = 0;
+				Connection conn =null;
 				try
 				{
-					Class.forName("com.mysql.jdbc.Driver"); 
+					Class.forName("com.mysql.cj.jdbc.Driver"); 
 					conn =DriverManager.getConnection("jdbc:mysql://localhost:3306/mydb","root","root");
 					if(basilCNT>0)
 					{
-						PreparedStatement stmt = conn.prepareStatement("insert into cart(Cust_id,Product_id,Quantity) values (?,?,?)");
+						PreparedStatement stmt = conn.prepareStatement("select idProduct from product where ProductName = (?)");
+						stmt.setString(1,"Basil");
+						ResultSet rs = stmt.executeQuery();
+						if(rs.next()!=false)
+						{
+							stmt = conn.prepareStatement("insert into cart(Cust_id,Product_id,Quantity) values (?,?,?)");
+							stmt.setString(1,Integer.toString(id));
+							stmt.setString(2,rs.getString("idProduct"));
+							stmt.setString(3,Integer.toString(basilCNT));
+							stmt.executeUpdate();
+							x++;
+						}
 					}
-					
-					String fullname = textField.getText();
-					String username = textField_1.getText();
-					String password = passwordField.getText();
-					String address	= textField_2.getText();
-					String city 	= textField_3.getText();
-					String state 	= textField_4.getText();
-					String pincode	= textField_5.getText();
-					String email =textField_6.getText();
-					
-					stmt.setString(1,fullname);
-					stmt.setString(2,username);
-					stmt.setString(3,password);
-					stmt.setString(4,address);
-					stmt.setString(5,city);
-					stmt.setString(6,state);
-					stmt.setString(7,pincode);
-					stmt.setString(8,email);
-					int rs = stmt.executeUpdate();
-					if(rs>0)
+					if(mintCNT>0)
 					{
-						JOptionPane.showMessageDialog(null, "Data saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+						PreparedStatement stmt = conn.prepareStatement("select idProduct from product where ProductName = (?)");
+						stmt.setString(1,"Mint");
+						ResultSet rs = stmt.executeQuery();
+						if(rs.next()!=false)
+						{
+							stmt = conn.prepareStatement("insert into cart(Cust_id,Product_id,Quantity) values (?,?,?)");
+							stmt.setString(1,Integer.toString(id));
+							stmt.setString(2,rs.getString("idProduct"));
+							stmt.setString(3,Integer.toString(mintCNT));
+							stmt.executeUpdate();
+							x++;
+						}
+					}
+					if(ginsengCNT>0)
+					{
+						PreparedStatement stmt = conn.prepareStatement("select idProduct from product where ProductName = (?)");
+						stmt.setString(1,"Ginseng");
+						ResultSet rs = stmt.executeQuery();
+						if(rs.next()!=false)
+						{
+							stmt = conn.prepareStatement("insert into cart(Cust_id,Product_id,Quantity) values (?,?,?)");
+							stmt.setString(1,Integer.toString(id));
+							stmt.setString(2,rs.getString("idProduct"));
+							stmt.setString(3,Integer.toString(ginsengCNT));
+							stmt.executeUpdate();
+							x++;
+						}
+					}
+					if(turmericCNT>0)
+					{
+						PreparedStatement stmt = conn.prepareStatement("select idProduct from product where ProductName = (?)");
+						stmt.setString(1,"Turmeric");
+						ResultSet rs = stmt.executeQuery();
+						if(rs.next()!=false)
+						{
+							stmt = conn.prepareStatement("insert into cart(Cust_id,Product_id,Quantity) values (?,?,?)");
+							stmt.setString(1,Integer.toString(id));
+							stmt.setString(2,rs.getString("idProduct"));
+							stmt.setString(3,Integer.toString(turmericCNT));
+							stmt.executeUpdate();
+							x++;
+						}
+					}
+					if(x>0)
+					{
+						JOptionPane.showMessageDialog(null, "Order saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
 					}
 				}
 				catch(Exception exp)
@@ -333,15 +381,9 @@ public class Herb {
 						}
 					}
 				}
-				
-					
-				if(mintCNT>0)
-					op+="\nMint                     "+mintCNT+"              "+mintCNT*80;
-				if(ginsengCNT>0)
-					op+="\nginseng              "+ginsengCNT+"              "+ginsengCNT*800;
-				if(turmericCNT>0)
-					op+="\nturmeric              "+turmericCNT+"              "+turmericCNT*320;
-			*/}
+				frame.dispose();
+				f.setVisible(true);
+			}
 		});
 		btnNewButton_2.setFont(new Font("Tahoma", Font.PLAIN, 14));
 		btnNewButton_2.setBounds(229, 386, 160, 30);

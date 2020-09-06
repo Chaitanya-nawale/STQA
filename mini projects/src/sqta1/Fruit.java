@@ -4,6 +4,11 @@ import java.awt.Font;
 import java.awt.SystemColor;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -22,14 +27,11 @@ public class Fruit {
 	private JTextField textFieldGuava;
 	private JTextField textFieldOrange;
 
-	/**
-	 * Launch the application.
-	 */
-	public void fruitBook() {
+	public static void fruitBook(int id,JFrame f) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					Fruit window = new Fruit();
+					Fruit window = new Fruit(id, f);
 					window.frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -38,17 +40,11 @@ public class Fruit {
 		});
 	}
 
-	/**
-	 * Create the application.
-	 */
-	public Fruit() {
-		initialize();
+	public Fruit(int id,JFrame f) {
+		initialize(id, f);
 	}
 
-	/**
-	 * Initialize the contents of the frame.
-	 */
-	private void initialize() {
+	private void initialize(int id,JFrame f) {
 		frame = new JFrame();
 		frame.setTitle("Fruits");
 		frame.getContentPane().setForeground(SystemColor.desktop);
@@ -65,13 +61,12 @@ public class Fruit {
 		lblNewLabel.setBounds(229, 10, 141, 27);
 		frame.getContentPane().add(lblNewLabel);
 		
-		JButton btnNewButton = new JButton("Logout");
+		JButton btnNewButton = new JButton("Back");
 		btnNewButton.setFont(new Font("Tahoma", Font.PLAIN, 12));
 		btnNewButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				frame.dispose();
-				LogIn obj = new LogIn();
-				obj.initialize();
+				f.setVisible(true);
 			}
 		});
 		btnNewButton.setBounds(10, 14, 97, 28);
@@ -87,16 +82,18 @@ public class Fruit {
 		JButton btnNewButton_1 = new JButton("Cart");
 		btnNewButton_1.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				String op = "Products        Count       Total";
+				String op = "Products    |    Count    |    Total";
+				op+="\n-------------------------------------------";
 				if(appleCNT>0)
-					op+="\nApple                  "+appleCNT+"              "+appleCNT*100;
+					op+="\nApple           |       "+appleCNT+"         |     "+appleCNT*100;
 				if(mangoCNT>0)
-					op+="\nMango                "+mangoCNT+"              "+mangoCNT*150;
-				if(guavaCNT>0)
-					op+="\nGuava                 "+guavaCNT+"              "+guavaCNT*80;
+					op+="\nMango         |       "+mangoCNT+"         |     "+mangoCNT*150;
 				if(orangeCNT>0)
-					op+="\nOrange               "+orangeCNT+"              "+orangeCNT*60;
+					op+="\nOrange        |       "+orangeCNT+"         |     "+orangeCNT*60;
+				if(guavaCNT>0)
+					op+="\nGuava          |       "+guavaCNT+"         |     "+guavaCNT*80;
 				int TotalPrice = appleCNT*100+mangoCNT*150+guavaCNT*80+orangeCNT*60;
+				op+="\n-------------------------------------------";
 				op+="\nTotal Price                         "+TotalPrice;
 				JOptionPane.showMessageDialog(frame,op);
 			}
@@ -115,6 +112,10 @@ public class Fruit {
 		buttonApplePlus.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				appleCNT++;
+				if(appleCNT > 20) {
+					appleCNT = 20;
+					JOptionPane.showMessageDialog(null, "You can't buy more than 20!");
+				}
 				textFieldApple.setText(Integer.toString(appleCNT));
 			}
 		});
@@ -147,6 +148,10 @@ public class Fruit {
 		buttonMangoPlus.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				mangoCNT++;
+				if(mangoCNT > 20) {
+					mangoCNT = 20;
+					JOptionPane.showMessageDialog(null, "You can't buy more than 20!");
+				}
 				textFieldMango.setText(Integer.toString(mangoCNT));
 			}
 		});
@@ -199,6 +204,10 @@ public class Fruit {
 		buttonGuavaPlus.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				guavaCNT++;
+				if(guavaCNT > 20) {
+					guavaCNT = 20;
+					JOptionPane.showMessageDialog(null, "You can't buy more than 20!");
+				}
 				textFieldGuava.setText(Integer.toString(guavaCNT));
 			}
 		});
@@ -249,6 +258,10 @@ public class Fruit {
 		buttonOrangePlus.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				orangeCNT++;
+				if(orangeCNT > 20) {
+					orangeCNT = 20;
+					JOptionPane.showMessageDialog(null, "You can't buy more than 20!");
+				}
 				textFieldOrange.setText(Integer.toString(orangeCNT));
 			}
 		});
@@ -277,7 +290,100 @@ public class Fruit {
 		buttonOrangeMinus.setBounds(531, 309, 40, 25);
 		frame.getContentPane().add(buttonOrangeMinus);
 		
-		JButton btnNewButton_2 = new JButton("Place Order");
+		JButton btnNewButton_2 = new JButton(" Place Order");
+		btnNewButton_2.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) 
+			{
+				int x = 0;
+				Connection conn =null;
+				try
+				{
+					Class.forName("com.mysql.cj.jdbc.Driver"); 
+					conn =DriverManager.getConnection("jdbc:mysql://localhost:3306/mydb","root","root");
+					if(appleCNT>0)
+					{
+						PreparedStatement stmt = conn.prepareStatement("select idProduct from product where ProductName = (?)");
+						stmt.setString(1,"Apple");
+						ResultSet rs = stmt.executeQuery();
+						if(rs.next()!=false)
+						{
+							stmt = conn.prepareStatement("insert into cart(Cust_id,Product_id,Quantity) values (?,?,?)");
+							stmt.setString(1,Integer.toString(id));
+							stmt.setString(2,rs.getString("idProduct"));
+							stmt.setString(3,Integer.toString(appleCNT));
+							stmt.executeUpdate();
+							x++;
+						}
+					}
+					if(mangoCNT>0)
+					{
+						PreparedStatement stmt = conn.prepareStatement("select idProduct from product where ProductName = (?)");
+						stmt.setString(1,"Mango");
+						ResultSet rs = stmt.executeQuery();
+						if(rs.next()!=false)
+						{
+							stmt = conn.prepareStatement("insert into cart(Cust_id,Product_id,Quantity) values (?,?,?)");
+							stmt.setString(1,Integer.toString(id));
+							stmt.setString(2,rs.getString("idProduct"));
+							stmt.setString(3,Integer.toString(mangoCNT));
+							stmt.executeUpdate();
+							x++;
+						}
+					}
+					if(guavaCNT>0)
+					{
+						PreparedStatement stmt = conn.prepareStatement("select idProduct from product where ProductName = (?)");
+						stmt.setString(1,"Guava");
+						ResultSet rs = stmt.executeQuery();
+						if(rs.next()!=false)
+						{
+							stmt = conn.prepareStatement("insert into cart(Cust_id,Product_id,Quantity) values (?,?,?)");
+							stmt.setString(1,Integer.toString(id));
+							stmt.setString(2,rs.getString("idProduct"));
+							stmt.setString(3,Integer.toString(guavaCNT));
+							stmt.executeUpdate();
+							x++;
+						}
+					}
+					if(orangeCNT>0)
+					{
+						PreparedStatement stmt = conn.prepareStatement("select idProduct from product where ProductName = (?)");
+						stmt.setString(1,"Orange");
+						ResultSet rs = stmt.executeQuery();
+						if(rs.next()!=false)
+						{
+							stmt = conn.prepareStatement("insert into cart(Cust_id,Product_id,Quantity) values (?,?,?)");
+							stmt.setString(1,Integer.toString(id));
+							stmt.setString(2,rs.getString("idProduct"));
+							stmt.setString(3,Integer.toString(orangeCNT));
+							stmt.executeUpdate();
+							x++;
+						}
+					}
+					if(x>0)
+					{
+						JOptionPane.showMessageDialog(null, "Order saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+					}
+				}
+				catch(Exception exp)
+				{
+					exp.printStackTrace();
+				}
+				finally
+				{
+					if (conn != null)
+					{
+						try {
+							conn.close();
+						} catch (SQLException e1) {
+							e1.printStackTrace();
+						}
+					}
+				}
+				frame.dispose();
+				f.setVisible(true);
+			}
+		});
 		btnNewButton_2.setFont(new Font("Tahoma", Font.PLAIN, 14));
 		btnNewButton_2.setBounds(229, 386, 160, 30);
 		frame.getContentPane().add(btnNewButton_2);

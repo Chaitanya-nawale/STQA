@@ -13,6 +13,8 @@ import javax.swing.JTextField;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.sql.*;
+import java.util.Objects;
+import java.util.regex.Pattern;
 public class Register {
 
 	private JFrame frame;
@@ -26,11 +28,11 @@ public class Register {
 	private JTextField textField_5;
 	private JTextField textField_6;
 
-	public static void registration() {
+	public static void registration(JFrame f) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					Register window = new Register();
+					Register window = new Register(f);
 					window.frame.setVisible(true);
 					return;
 				} catch (Exception e) {
@@ -40,12 +42,13 @@ public class Register {
 		});
 	}
 
-	public Register() {
-		initialize();
+	public Register(JFrame f) {
+		initialize(f);
 	}
 
-	private void initialize() {
+	private void initialize(JFrame f) {
 		frame = new JFrame();
+		frame.setTitle("Registration Form");
 		frame.getContentPane().setForeground(SystemColor.desktop);
 		frame.getContentPane().setBackground(SystemColor.info);
 		frame.getContentPane().setFont(new Font("Dialog", Font.PLAIN, 12));
@@ -90,36 +93,84 @@ public class Register {
 		frame.getContentPane().add(lblNewLabel_8);
 		
 		JButton btnNewButton = new JButton("Register");
-		btnNewButton.addActionListener(new ActionListener() {
+		btnNewButton.addActionListener(new ActionListener() 
+		{
 			@SuppressWarnings("deprecation")
-			public void actionPerformed(ActionEvent e){
+			public void actionPerformed(ActionEvent e)
+			{
+				String username = textField.getText();
+				String fullname = textField_1.getText();
+				String password = passwordField.getText();
+				String password1 = passwordField_1.getText();
+				String address	= textField_2.getText();
+				String city 	= textField_3.getText();
+				String state 	= textField_4.getText();
+				String pincode	= textField_5.getText();
+				String email 	= textField_6.getText();
+				if(username.length()==0 || fullname.length()==0 || password.length()==0 || password1.length()==0 || address.length()==0 || city.length() == 0 || state.length()==0 || pincode.length()==0 || email.length() == 0) {
+                	JOptionPane.showMessageDialog(btnNewButton, "All fields are compulsory");
+                	return;
+                }
+				else if(invalidName(fullname))
+				{
+					JOptionPane.showMessageDialog(btnNewButton, "Invalid Full name. Please use only characters.");
+                	return;
+				}
+				else if(invalidPincode(pincode))
+				{
+					JOptionPane.showMessageDialog(btnNewButton, "Invalid Pincode. Please enter 6 digit pincode.");
+                	return;
+				}
+				else if(!Objects.equals(password,password1))
+				{
+					JOptionPane.showMessageDialog(btnNewButton, "Passwords don't match.");
+                	return;
+				}
+				else if(isWeakPassword(password)){ return;}
+				else if(invalidName(city))
+				{
+					JOptionPane.showMessageDialog(btnNewButton, "Invalid city name. Please use only characters.");
+                	return;
+				}
+				else if(invalidName(state))
+				{
+					JOptionPane.showMessageDialog(btnNewButton, "Invalid state name. Please use only characters.");
+                	return;
+				}
+				else if(invalidEmail(email))
+				{
+					JOptionPane.showMessageDialog(btnNewButton, "Invalid email address.");
+                	return;
+				}
 				Connection conn =null;
 				try
 				{
-					Class.forName("com.mysql.jdbc.Driver"); 
+					Class.forName("com.mysql.cj.jdbc.Driver"); 
 					conn =DriverManager.getConnection("jdbc:mysql://localhost:3306/mydb","root","root");
-					PreparedStatement stmt = conn.prepareStatement("insert into customer( FullName, UserName, Password, Address, City, State, Pincode, Email) values (?,?,?,?,?,?,?,?)");
-					String fullname = textField.getText();
-					String username = textField_1.getText();
-					String password = passwordField.getText();
-					String address	= textField_2.getText();
-					String city 	= textField_3.getText();
-					String state 	= textField_4.getText();
-					String pincode	= textField_5.getText();
-					String email =textField_6.getText();
-					
-					stmt.setString(1,fullname);
-					stmt.setString(2,username);
-					stmt.setString(3,password);
-					stmt.setString(4,address);
-					stmt.setString(5,city);
-					stmt.setString(6,state);
-					stmt.setString(7,pincode);
-					stmt.setString(8,email);
-					int rs = stmt.executeUpdate();
-					if(rs>0)
+					PreparedStatement query = conn.prepareStatement("select idCustomer, FullName, password from customer where UserName = (?)");
+					query.setString(1,username);
+					ResultSet qs = query.executeQuery();
+					if(qs.next()==false)
 					{
-						JOptionPane.showMessageDialog(null, "Data saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+						PreparedStatement stmt = conn.prepareStatement("insert into customer( FullName, UserName, Password, Address, City, State, Pincode, Email) values (?,?,?,?,?,?,?,?)");
+						stmt.setString(1,fullname);
+						stmt.setString(2,username);
+						stmt.setString(3,password);
+						stmt.setString(4,address);
+						stmt.setString(5,city);
+						stmt.setString(6,state);
+						stmt.setString(7,pincode);
+						stmt.setString(8,email);
+						int rs = stmt.executeUpdate();
+						if(rs>0)
+						{
+							JOptionPane.showMessageDialog(btnNewButton, "Data saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+						}
+					}
+					else
+					{
+						JOptionPane.showMessageDialog(btnNewButton, "Username already exists. Try something new.");
+	                	return;
 					}
 				}
 				catch(Exception exp)
@@ -130,9 +181,12 @@ public class Register {
 				{
 					if (conn != null)
 					{
-						try {
+						try 
+						{
 							conn.close();
-						} catch (SQLException e1) {
+						} 
+						catch (SQLException e1)
+						{
 							e1.printStackTrace();
 						}
 					}
@@ -163,8 +217,7 @@ public class Register {
 		btnNewButton_2.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				frame.dispose();
-				LogIn obj = new LogIn();
-				obj.initialize();
+				f.setVisible(true);
 			}
 		});
 		btnNewButton_2.setBounds(263, 253, 96, 21);
@@ -213,4 +266,48 @@ public class Register {
 		frame.getContentPane().add(textField_6);
 		textField_6.setColumns(10);
 	}
+	
+	public boolean invalidName(String s)
+	{
+		return ((!s.equals("")) && (s != null) && !(s.matches("^[a-z A-Z]*"))); 
+	}
+	public boolean invalidPincode(String s)
+	{
+		if(s.length()!=6) return true;
+		return ((!s.equals("")) && (s != null) && !(s.matches("^[0-9]*"))); 
+	}
+	public boolean isWeakPassword(String pass)
+	{
+		String uppercase = "(.*[A-Z].*)";
+		String lowercase = "(.*[A-Z].*)";
+		String numbers = "(.*[0-9].*)";
+		String special = "(.*[,~,!,@,#,$,%,^,&,*,_,?].*$)";
+		if(pass.length()<6) {
+    		JOptionPane.showMessageDialog(null, "Password length should be minimum 6");
+    	}
+		else if(!pass.matches(uppercase)) {
+    		JOptionPane.showMessageDialog(null, "Password should contain atleast one upper case alphabet");
+		}
+		else if(!pass.matches(lowercase)) {
+    		JOptionPane.showMessageDialog(null, "Password should contain atleast one lower case alphabet");
+		}
+		else if(!pass.matches(numbers)) {
+    		JOptionPane.showMessageDialog(null, "Password should contain atleast one number");
+    	}
+		else if(!pass.matches(special)) {
+    		JOptionPane.showMessageDialog(null, "Password should contain atleast one special character");
+    	}
+		else
+		{
+			return false;
+		}
+    	return true; 
+	}
+	public boolean invalidEmail(String email) {
+    	
+    	String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\."+ "[a-zA-Z0-9_+&*-]+)*@" + "(?:[a-zA-Z0-9-]+\\.)+[a-z" + "A-Z]{2,7}$"; 
+    	Pattern pat = Pattern.compile(emailRegex); 
+    	if (email == null) return true; 
+    	return !pat.matcher(email).matches(); 	
+    }
 }
